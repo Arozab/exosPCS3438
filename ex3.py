@@ -1,40 +1,34 @@
 from sklearn.linear_model import Lasso
 
+import sklearn as sk
 import csv
 import random
 import math
 import numpy as np
-import metrics
 
-def loadDataset(filename, split):
 
-    with open(filename, 'r') as csvfile:
+lines = csv.reader(open("reg01.csv", "r"),delimiter=',')
+header = next(lines)
+dataset = list(lines)
 
-        lines = csv.reader(csvfile)
-        header = next(lines)
-        dataset = list(lines)
-        trainSize = int(split*len(dataset))
+X_data = [[eval(x) for x in t] for t in dataset]
+y_data = [eval(t[-1]) for t in dataset]
 
-        trainset = dataset[:trainSize]
-        testset = dataset[trainSize:]
-        print(len(trainset))
-        print(len(testset))
-        return [trainset, testset]
 
-data_train,data_test = loadDataset('reg01.csv',0.9)
+print('-- Leave One Out --')
+MSEtrainset_accuracy=0
+MSEtestset_accuracy=0
+for i in range(len(dataset)):
+    X_test = np.array(X_data[i]).reshape(-1,1).T
+    y_test = np.array(y_data[i]).reshape(-1,1)
+    X_train = np.array(X_data[:i]+X_data[i+1:])
+    y_train = np.array(y_data[:i]+y_data[i+1:]).reshape(-1,1)
 
-X_train = [[float(x) for x in t] for t in data_train]
-y_train = [float(t[-1]) for t in data_train]
-X_test = [[float(x) for x in t]  for t in data_test]
-y_test = [float(t[-1]) for t in data_test]
-print(y_test)
-print(len(X_train))
-print(len(y_train))
-print(len(X_test))
-print(len(y_test))
+    las = Lasso(alpha=1, normalize=True)
+    las.fit(X_train, y_train)
 
-las = Lasso(alpha=1, normalize=True)
-las.fit(X_train, y_train)
-las.coef_
-preds = las.predict(X_test)
-print('RMSE (Lasso reg.) =', np.sqrt(metrics.mean_squared_error(y_test, preds)))
+    MSEtestset_accuracy += sk.metrics.mean_squared_error(y_test, las.predict(X_test)) /len(dataset)
+    MSEtrainset_accuracy += sk.metrics.mean_squared_error(y_train, las.predict(X_train)) /len(dataset)
+
+print(('Leave one out - MSE on train set: {0}').format(MSEtrainset_accuracy))
+print(('Leave one out - MSE on test set: {0}').format(MSEtestset_accuracy))
